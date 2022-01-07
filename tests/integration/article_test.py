@@ -1,9 +1,8 @@
-from subsamplr.core.bin import BinCollection
-from subsamplr.data.unit_generator import UnitGenerator
-from pandas import read_csv, isnull
+from subsamplr.core.bin import BinCollection  # type: ignore
+from subsamplr.data.unit_generator import UnitGenerator  # type: ignore
+from pandas import read_csv  # type: ignore
 from io import StringIO
 from numpy.random import seed as npseed  # type: ignore
-from numpy import NaN
 import yaml
 import pytest
 
