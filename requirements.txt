@@ -7,3 +7,4 @@ psycopg2==2.9.2
 psycopg2-binary==2.9.3
 jupyter-client==7.1.0
 jupyter-core==4.9.1
+matplotlib==3.5.1

@@ -140,6 +140,11 @@ class ContinuousVariable(Variable):
                 return False
             return value >= self.endpoints[0] and value < self.endpoints[1]
 
+        def width(self):
+            """Get the width of the interval"""
+
+            return self.endpoints[1] - self.endpoints[0]
+
 
 class DiscreteVariable(Variable):
     """Discrete-valued or categorical variable."""
@@ -191,3 +196,15 @@ class DiscreteVariable(Variable):
 
         def contains(self, value):
             return value in self.contents
+
+        def width(self):
+            """Get the width of the bucket"""
+            c = self.contents
+            ret = max(c) - min(c)
+
+            # If there is a constant difference between consecutive
+            # elements in the contents, add that difference to the width.
+            if len(set([t - s for s, t in zip(c, c[1:])])):
+                ret += c[1] - c[0]
+
+            return ret

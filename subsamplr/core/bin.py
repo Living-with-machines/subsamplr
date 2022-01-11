@@ -1,6 +1,9 @@
-from subsamplr.core.variable import Variable  # type: ignore
+from subsamplr.core.variable import Variable, DiscreteVariable, ContinuousVariable  # type: ignore
 from subsamplr.core.variable_generator import VariableGenerator  # type: ignore
+from numpy import ones  # type: ignore
 from numpy.random import choice  # type: ignore
+from mpl_toolkits import mplot3d  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
 
 
 class Bin:
@@ -40,7 +43,14 @@ class BinCollection:
     """A collection of histogram bins."""
 
     def __init__(self, dimensions, track_exclusions=True):
-        """Constructor for the BinCollection class."""
+        """Constructor for the BinCollection class.
+
+        Args:
+            dimensions       (list): a list of Variable instances specifying
+                                     the dimensions of the bin collection.
+            track_exclusions (bool): a boolean value indicating whether units
+                                     excluded from the collection should be tracked.
+        """
         # Store the bins in a nested dictionary for efficient selection & assignment.
         self.bins = {}
         for dim in dimensions:
@@ -54,8 +64,6 @@ class BinCollection:
         if track_exclusions:
             self.exclusions = dict()  # type: dict
 
-        # self.calls_to_assign = 0
-
     def assign_to_bin(self, unit, values):
         """Assign a unit to a bin and create the bin if it doesn't already exist.
 
@@ -65,8 +73,8 @@ class BinCollection:
         dictionary.
 
         Args:
-            unit    (str): the name of a subsampling unit
-            values       : a collection of variable values, one per dimension
+            unit    (str): the name of a subsampling unit.
+            values       : a collection of variable values, one per dimension.
         """
         # TODO: log debug message if out of range:
         # logging.debug(f"unit {unit} out of range.")
@@ -138,7 +146,6 @@ class BinCollection:
 
         Args:
             k       (int): The number of items to select.
-            seed    (int): A seed for RNG initialisation.
 
         Return:
             A set of units (strings).
@@ -251,8 +258,106 @@ class BinCollection:
         """Count the number of exclusions in this collection."""
         return len(self.exclusions)
 
+    def plot(self, figsize=(6, 6), dpi=120, elev=25, azim=40, subsample=None):
+        """Plot the bin collection as a 3D histogram."""
+
+        # # TODO: optionally pass in the name of two dimensions.
+
+        if (len(self.dimensions) < 2):
+            raise ValueError("Insufficient dimensions for 3D plotting.")
+
+        xy_pos = list()
+        z_size = list()
+        z_size_sub = list() # Used only if subsample is not None.
+        x_dim = self.dimensions[0]
+        y_dim = self.dimensions[1]
+
+        # Determine the positions of the bars.
+        for x_item in self.bins.items():
+            for y_item in x_item[1].items():
+                # The bar position is the index of the partition part.
+                xy_pos.append((x_item[0], y_item[0]))
+                z_size.append(self.count_units(d=y_item[1]))
+
+                if subsample:
+                    # Count the subsample units in the bin at this xy position.
+                    count_sub = 0
+                    binned_units_nested = [bin.contents for bin in self.iter(d=y_item[1])]
+                    binned_units = [item for sublist in binned_units_nested for item in sublist]
+                    for unit in subsample:
+                        if unit in binned_units:
+                            count_sub += 1
+                    z_size_sub.append(count_sub)
+
+        # Construct & draw the BinCollection plot.
+        fig = plt.figure(figsize=figsize, dpi=dpi)
+        ax = plt.axes(projection="3d")
+        plt.title(f"Bin collection, k={self.count_units()}")
+        BinCollection.write_axes(ax, x_dim=x_dim, y_dim=y_dim, xy_pos=xy_pos,
+            z_size=z_size, elev=elev, azim=azim)
+        plt.show()
+
+        # If a subsample was given, construct & draw the subsample plot.
+        if not subsample:
+            return
+
+        fig_sub = plt.figure(figsize=figsize, dpi=dpi)
+        ax_sub = plt.axes(projection="3d")
+        plt.title(f"Subsample, k={len(subsample)}")
+        BinCollection.write_axes(ax_sub, x_dim=x_dim, y_dim=y_dim, xy_pos=xy_pos,
+            z_size=z_size_sub, elev=elev, azim=azim)
+        plt.show()
+
     @staticmethod
-    def construct(config, track_exclusions):
+    def write_axes(axes, x_dim, y_dim, xy_pos, z_size, elev, azim):
+        """Write to the axes to creat a plot"""
+
+        # Since the positions are indices, the bars have unit width.
+        x_size = ones(len(xy_pos))
+        y_size = ones(len(xy_pos))
+        x_pos = [p[0] for p in xy_pos]
+        y_pos = [p[1] for p in xy_pos]
+        z_pos = [0] * len(xy_pos)
+
+        #ax = plt.axes(projection="3d")
+        axes.view_init(elev=elev, azim=azim)
+        axes.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size)
+
+        # Label the axes with the dimension names.
+        axes.set_xlabel(x_dim.name)
+        axes.set_ylabel(y_dim.name)
+        axes.set_zlabel('Unit count')
+
+        # Set the axis ticks and tick labels.
+        xticks, xticklabels = BinCollection.ticks([i[0] for i in xy_pos], x_dim)
+        yticks, yticklabels = BinCollection.ticks([i[1] for i in xy_pos], y_dim)
+        axes.set_xticks(xticks)
+        axes.set_yticks(yticks)
+        axes.set_xticklabels(xticklabels)
+        axes.set_yticklabels(yticklabels)
+
+
+    @staticmethod
+    def ticks(positions, dimension):
+        """Get ticks and tick labels for a plot, given positions on an axis."""
+
+        # Set the axis ticks and tick labels.
+        ticks = list(set(positions))
+        ticks.sort()
+
+        if isinstance(dimension, DiscreteVariable):
+            ticklabels = [dimension.partition[i].contents[0] for i in ticks]
+        elif isinstance(dimension, ContinuousVariable):
+            ticklabels = [dimension.partition[i].endpoints[0] for i in ticks]
+        else:
+            raise ValueError(f"Unexpected dimension type: {type(dimension)}")
+
+        # Include a final tick & label at the upper bound of the axis.
+        return (ticks + [ticks[-1] + 1],
+            ticklabels + [max(ticklabels) + dimension.partition[-1].width()])
+
+    @ staticmethod
+    def construct(config, track_exclusions=False):
         """Static factory method.
 
         Constructs a BinCollection instance from configuration parameters.
