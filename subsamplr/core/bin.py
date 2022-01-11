@@ -292,7 +292,7 @@ class BinCollection:
         # Construct & draw the BinCollection plot.
         fig = plt.figure(figsize=figsize, dpi=dpi)
         ax = plt.axes(projection="3d")
-        plt.title(f"Bin collection, k={self.count_units()}")
+        plt.title(f"Complete collection of {self.count_units()} units")
         BinCollection.write_axes(ax, x_dim=x_dim, y_dim=y_dim, xy_pos=xy_pos,
             z_size=z_size, elev=elev, azim=azim)
         plt.show()
@@ -303,7 +303,7 @@ class BinCollection:
 
         fig_sub = plt.figure(figsize=figsize, dpi=dpi)
         ax_sub = plt.axes(projection="3d")
-        plt.title(f"Subsample, k={len(subsample)}")
+        plt.title(f"Subsample of {len(subsample)} units")
         BinCollection.write_axes(ax_sub, x_dim=x_dim, y_dim=y_dim, xy_pos=xy_pos,
             z_size=z_size_sub, elev=elev, azim=azim)
         plt.show()
