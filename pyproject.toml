@@ -1,0 +1,7 @@
+[project]
+name = "subsamplr"
+description = "A tool for representative subsampling"
+version = "0.0.1"
+dynamic = ["dependencies"]
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
