@@ -1,6 +1,8 @@
 check:
 	mypy subsamplr/
 	mypy tests/
+
+test:
 	python -m pytest tests/unit
 
 test_integration:
@@ -12,4 +14,4 @@ test_end_to_end:
 test_all:
 	python -m pytest
 
-.PHONY: check test_integration test_all
+.PHONY: check test test_integration test_end_to_end test_all
