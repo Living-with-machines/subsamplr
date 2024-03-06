@@ -4,7 +4,7 @@ from pandas import read_csv  # type: ignore
 from io import StringIO
 from numpy.random import seed as npseed  # type: ignore
 import yaml
-import pytest
+import pytest  # type: ignore
 
 
 # Sample configuration for testing:

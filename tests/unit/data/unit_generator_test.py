@@ -1,7 +1,7 @@
 from subsamplr.data.unit_generator import UnitGenerator  # type: ignore
 from subsamplr.core.variable import ContinuousVariable as CtsVar  # type: ignore
 from subsamplr.core.variable import DiscreteVariable as DisVar  # type: ignore
-import pytest
+import pytest  # type: ignore
 from pandas import read_csv  # type: ignore
 from io import StringIO
 
