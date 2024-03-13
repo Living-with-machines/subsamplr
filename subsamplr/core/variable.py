@@ -91,7 +91,7 @@ class ContinuousVariable(Variable):
         # Check the endpoints.
         if isinstance(part, ContinuousVariable.Interval):
             part = part.endpoints
-        endpoints_list = [i.endpoints for i in self.partition]
+        endpoints_list = [interval.endpoints for interval in self.partition]
         if not part in endpoints_list:
             return None
         return endpoints_list.index(part)
@@ -126,6 +126,9 @@ class ContinuousVariable(Variable):
                     f"{msg} but {endpoints[0]} >= {endpoints[1]}.")
             self.endpoints = endpoints
 
+        def __str__(self):
+            return f"{self.variable.name}: {self.endpoints}"
+
         # Override the contains method in the continuous variable case.
         def contains(self, value):
             """
@@ -147,7 +150,7 @@ class ContinuousVariable(Variable):
 
 
 class DiscreteVariable(Variable):
-    """Discrete-valued or categorical variable."""
+    """Discrete-valued variable."""
 
     def __init__(self, name, type="int"):
         """ Constructor for the DiscreteVariable class.
@@ -167,12 +170,12 @@ class DiscreteVariable(Variable):
         variable, or None if the part is not contained in this variable.
 
         Args:
-            part    : A Bucket or a tuple of contents.
+            part    : An element of the variable's partition.
         """
         # Check the contents.
         if isinstance(part, DiscreteVariable.Bucket):
             part = part.contents
-        contents_list = [b.contents for b in self.partition]
+        contents_list = [bucket.contents for bucket in self.partition]
         if not part in contents_list:
             return None
         return contents_list.index(part)
@@ -192,7 +195,12 @@ class DiscreteVariable(Variable):
                 raise ValueError(
                     "Bucket constructor requires a DiscreteVariable.")
             self.variable = variable
+            if not isinstance(contents, tuple):
+                raise ValueError("Bucket contents must be a tuple.")
             self.contents = contents
+
+        def __str__(self):
+            return f"{self.variable.name}: {self.contents[0]}, ..., {self.contents[-1]}"
 
         def contains(self, value):
             return value in self.contents
@@ -208,3 +216,68 @@ class DiscreteVariable(Variable):
                 ret += c[1] - c[0]
 
             return ret
+
+
+class CategoricalVariable(Variable):
+    """Categorical variable."""
+
+    def __init__(self, name, type="str"):
+        """ Constructor for the CategoricalVariable class.
+        Args:
+            name             (str): The name of the variable.
+            type             (str): The variable type.
+        """
+        self.part_class = CategoricalVariable.Category
+        super().__init__(name=name, type=type)
+
+    def construct_part(self, variable, arg):
+        return CategoricalVariable.Category(variable, arg)
+
+    # Override the index method in the CategoricalVariable case.
+    def index(self, part):
+        """Get the index of a given part of the range of this
+        variable, or None if the part is not contained in this variable.
+
+        Args:
+            part    : An element of the variable's partition.
+        """
+        # Check the content.
+        if isinstance(part, CategoricalVariable.Category):
+            part = part.content
+        content_list = [category.content for category in self.partition]
+        if not part in content_list:
+            return None
+        return content_list.index(part)
+
+    class Category:
+        """One of the categories in a categorical variable."""
+
+        def __init__(self, variable, content):
+            """Category constructor
+
+            Args:
+                variable (CategoricalVariable) : A categorical variable whose
+                    categories include this category.
+                content     : A scalar value representing the category content.
+            """
+            if not isinstance(variable, CategoricalVariable):
+                raise ValueError(
+                    "Category constructor requires a CategoricalVariable.")
+            self.variable = variable
+
+            if isinstance(content, tuple) or isinstance(content, list) \
+                or isinstance(content, set) or isinstance(content, dict):
+                raise ValueError("Category content must be a scalar.")
+
+            self.content = content
+
+        def __str__(self):
+            return f"{self.variable.name}: {self.content}"
+
+        def contains(self, value):
+            return value == self.content
+
+        def width(self):
+            """Get the width of the category"""
+            # Every category is a singleton so has width zero.
+            return 0

@@ -1,4 +1,4 @@
-from subsamplr.core.variable import Variable, DiscreteVariable, ContinuousVariable  # type: ignore
+from subsamplr.core.variable import Variable, CategoricalVariable, DiscreteVariable, ContinuousVariable  # type: ignore
 from subsamplr.core.variable_generator import VariableGenerator  # type: ignore
 from numpy import ones  # type: ignore
 from numpy.random import choice  # type: ignore
@@ -7,7 +7,10 @@ import matplotlib.pyplot as plt  # type: ignore
 
 
 class Bin:
-    """A histogram bin."""
+    """A multi-dimensional histogram bin. When populated, bins contain 
+    the names of subsample units but not the associated values. The name
+    is assumed to be a key via which the values can be retrieved, e.g.
+    a row identifier in tabular data."""
 
     def __init__(self, parts):
         """Constructor for the Bin class.
@@ -17,6 +20,10 @@ class Bin:
         """
         self.contents = set()
         self.parts = parts
+
+    def __str__(self):
+        parts = '; '.join([p.__str__() for p in self.parts])
+        return f"Bin: [{parts}]"
 
     def count(self):
         """Count the number of units in this bin."""
@@ -37,7 +44,10 @@ class Bin:
     def dimensions(self):
         """Return the list of variables defining the dimensions of the bin."""
         return [part.variable for part in self.parts]
-
+    
+    def pick_units(self, size):
+        """Pick a random sample of units from the bin, without replacement."""
+        return choice(list(self.contents), size=size, replace=False)
 
 class BinCollection:
     """A collection of histogram bins."""
@@ -73,7 +83,7 @@ class BinCollection:
         dictionary.
 
         Args:
-            unit    (str): the name of a subsampling unit.
+            unit    (str): the name of a subsample unit.
             values       : a collection of variable values, one per dimension.
         """
         # TODO: log debug message if out of range:
@@ -148,7 +158,7 @@ class BinCollection:
             k       (int): The number of items to select.
 
         Return:
-            A set of units (strings).
+            A set of (str) names of subsample units.
 
         Throws:
             ValueError if the number of selections from a particular bin turns
@@ -162,8 +172,8 @@ class BinCollection:
             # Count how many times this bin appears in the bins selection.
             size = len([b for b in bins if b == bin])
             # Sample without replacement.
-            selection.update(
-                choice(list(bin.contents), size=size, replace=False))
+            selection.update(bin.pick_units(size))
+
             bins = [b for b in bins if b != bin]
         return selection
 
@@ -198,7 +208,7 @@ class BinCollection:
         return ret
 
     def iter(self, d=None):
-        """Gernerator for iterating over bins in the collection.
+        """Generator for iterating over bins in the collection.
 
         Args:
             d (dict): A dictionary within the nested bins attribute under which

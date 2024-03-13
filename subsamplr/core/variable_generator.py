@@ -1,5 +1,6 @@
 from subsamplr.core.variable import ContinuousVariable as CtsVar  # type: ignore
 from subsamplr.core.variable import DiscreteVariable as DisVar  # type: ignore
+from subsamplr.core.variable import CategoricalVariable as CatVar  # type: ignore
 from fractions import Fraction
 
 ROUNDING_DIGITS = 6
@@ -32,6 +33,11 @@ class VariableGenerator:
                 endpoints_list = VariableGenerator.endpoints_list(
                     v['min'], v['max'], v['bin_size'], v['name'])
                 var.partition = endpoints_list
+
+            elif v['class'] == 'categorical':
+                # Construct a categorical variable.
+                var = CatVar(v['name'], type=v['type'])
+                var.partition = v['categories']
 
             else:
                 raise Exception(f"Invalid variable class: {v}")
@@ -87,7 +93,7 @@ class VariableGenerator:
         Compute a partition for the range of a discrete variable.
         Args:
             min (number): The infimum of the variable range.
-            max (number): The suprimum of the variable range.
+            max (number): The supremum of the variable range.
             discretisation (number): The discretisation width.
             bin_size (number): The width of each bin in the partition
             name (str): The variable name.

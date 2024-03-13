@@ -1,5 +1,6 @@
 from subsamplr.core.variable import ContinuousVariable as CtsVar
 from subsamplr.core.variable import DiscreteVariable as DisVar
+from subsamplr.core.variable import CategoricalVariable as CatVar
 from subsamplr.core.bin import Bin, BinCollection
 from fractions import Fraction
 import random
@@ -17,11 +18,14 @@ class BinTestCase(unittest.TestCase):
         var2 = DisVar("Year")
         part2 = DisVar.Bucket(var2, (1855, 1856, 1857, 1858, 1859))
 
-        parts = [part1, part2]
+        var3 = CatVar("Location")
+        part3 = CatVar.Category(var3, "N")
+
+        parts = [part1, part2, part3]
         target = Bin(parts)
 
         # Test the dimensions method.
-        assert target.dimensions() == [var1, var2]
+        assert target.dimensions() == [var1, var2, var3]
 
         # Test the assign & count methods.
         unit = "XXX"
@@ -48,13 +52,14 @@ class BinCollectionTest(unittest.TestCase):
     def construct_target(self, assign=False, size=1000, seed=147):
         """Helper method.
 
-        Constructs two variables:
+        Constructs three variables:
         1. a continuous variable named 'Quality'
         2. a discrete variable named 'Year'
+        3. a categorical variable name 'Location'
 
         Defines a partition of the range of each variable.
 
-        Constructs a BinCollection along the two dimensions.
+        Constructs a BinCollection along the three dimensions.
 
         If assign is True, generates units with randomly chosen variable values
         and assigns the units to the BinCollection.
@@ -74,7 +79,11 @@ class BinCollectionTest(unittest.TestCase):
             contents_list.append(t)
         dim2.partition = contents_list
 
-        dimensions = [dim1, dim2]
+        # Construct a categorical Location dimension.
+        dim3 = CatVar("Location")
+        dim3.partition = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW']
+
+        dimensions = [dim1, dim2, dim3]
         target = BinCollection(dimensions)
         if not assign:
             return target
@@ -85,8 +94,9 @@ class BinCollectionTest(unittest.TestCase):
         units = [f"U{i}" for i in range(0, size)]
         qualities = [q/100 for q in random.choices(range(0, 100), k=size)]
         years = random.choices(range(1800, 1900), k=size)
+        locations = random.choices(['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'], k=size)
 
-        all_values = zip(qualities, years)
+        all_values = zip(qualities, years, locations)
 
         for unit, values in zip(units, all_values):
             target.assign_to_bin(unit, values)
@@ -102,7 +112,7 @@ class BinCollectionTest(unittest.TestCase):
 
         assert len(target.bins) == 0
 
-        values = (0.65, 1882)
+        values = (0.65, 1882, 'NE')
         target.assign_to_bin(unit, values)
 
         assert len(target.bins) == 1
@@ -147,7 +157,7 @@ class BinCollectionTest(unittest.TestCase):
         assert second_unit in target.units()
 
         # Use different values this time.
-        other_values = (0.22, 1876)
+        other_values = (0.22, 1876, 'S')
         target.assign_to_bin(third_unit, other_values)
 
         assert len(target.bins) == 2
@@ -168,8 +178,8 @@ class BinCollectionTest(unittest.TestCase):
 
         assert target.count_units() == size
 
-        # With seed = 147, 63 bins are created.
-        assert target.count_bins() == 63
+        # With seed = 147, 96 bins are created.
+        assert target.count_bins() == 96
 
         # With seed = 147, check the weights in the first dimension.
         assert target.weight_of_parts(target.bins, False)[0] == 8
@@ -199,8 +209,8 @@ class BinCollectionTest(unittest.TestCase):
 
         assert target.count_units() == size
 
-        # With seed = 147, 63 bins are created.
-        assert target.count_bins() == 63
+        # With seed = 147, 96 bins are created.
+        assert target.count_bins() == 96
 
         npseed(seed)
         bin = target.select_bin()
@@ -211,11 +221,15 @@ class BinCollectionTest(unittest.TestCase):
 
         # Construct a populated BinCollection.
         seed = 147
-        size = 1000
+        size = 10000
         target = self.construct_target(assign=True, size=size, seed=seed)
         assert target.count_units() == size
 
-        k = 200
+        # for bin in target.iter():
+        #     print(bin)
+        #     print(bin.count())
+
+        k = 100
         npseed(seed)
         result = target.select_units(k)
 

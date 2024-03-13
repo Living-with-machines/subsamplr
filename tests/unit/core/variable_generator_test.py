@@ -1,5 +1,6 @@
 from subsamplr.core.variable import ContinuousVariable as CtsVar  # type: ignore
 from subsamplr.core.variable import DiscreteVariable as DisVar  # type: ignore
+from subsamplr.core.variable import CategoricalVariable as CatVar  # type: ignore
 from subsamplr.core.variable_generator import VariableGenerator  # type: ignore
 from fractions import Fraction
 from io import StringIO
@@ -116,27 +117,38 @@ class VariableGeneratorTestCase(unittest.TestCase):
                 max: 1919, discretisation: 1, bin_size: 10}
             - {name: 'Mean OCR quality', class: 'continuous', type: 'float',
                 min: 0.6, max: 1, bin_size: 0.1}
+            - {name: 'Location', class: 'categorical', type: 'str',
+                categories: ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW']}
         """
 
         config = yaml.safe_load(StringIO(config))
         result = VariableGenerator.construct_variables(config)
 
-        assert len(result) == 2
+        assert len(result) == 3
         assert isinstance(result[0], DisVar)
 
-        dv = result[0]
-        assert dv.name == 'Year'
-        assert len(dv.partition) == 12
-        assert isinstance(dv.partition[3], DisVar.Bucket)
-        assert dv.partition[3].variable == dv
-        assert dv.partition[3].contents == (
+        dis_var = result[0]
+        assert dis_var.name == 'Year'
+        assert len(dis_var.partition) == 12
+        assert isinstance(dis_var.partition[3], DisVar.Bucket)
+        assert dis_var.partition[3].variable == dis_var
+        assert dis_var.partition[3].contents == (
             1830, 1831, 1832, 1833, 1834, 1835, 1836, 1837, 1838, 1839)
 
         assert isinstance(result[1], CtsVar)
 
-        cv = result[1]
-        assert cv.name == 'Mean OCR quality'
-        assert len(cv.partition) == 4
-        assert isinstance(cv.partition[3], CtsVar.Interval)
-        assert cv.partition[3].variable == cv
-        assert cv.partition[3].endpoints == (Fraction(9, 10), 1)
+        cat_var = result[1]
+        assert cat_var.name == 'Mean OCR quality'
+        assert len(cat_var.partition) == 4
+        assert isinstance(cat_var.partition[3], CtsVar.Interval)
+        assert cat_var.partition[3].variable == cat_var
+        assert cat_var.partition[3].endpoints == (Fraction(9, 10), 1)
+
+        assert isinstance(result[2], CatVar)
+
+        cat_var = result[2]
+        assert cat_var.name == 'Location'
+        assert len(cat_var.partition) == 8
+        assert isinstance(cat_var.partition[3], CatVar.Category)
+        assert cat_var.partition[3].variable == cat_var
+        assert cat_var.partition[3].content == 'W'
