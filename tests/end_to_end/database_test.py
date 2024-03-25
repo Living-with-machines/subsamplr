@@ -3,7 +3,7 @@ from subsamplr.core.bin import BinCollection  # type: ignore
 from pandas import DataFrame  # type: ignore
 from io import StringIO
 from numpy.random import seed as npseed  # type: ignore
-import yaml
+import yaml  # type: ignore
 import unittest
 
 

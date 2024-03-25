@@ -4,7 +4,7 @@ from subsamplr.core.variable import CategoricalVariable as CatVar  # type: ignor
 from subsamplr.core.variable_generator import VariableGenerator  # type: ignore
 from fractions import Fraction
 from io import StringIO
-import yaml
+import yaml  # type: ignore
 import unittest
 
 
