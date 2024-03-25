@@ -55,7 +55,7 @@ class BinCollectionTest(unittest.TestCase):
         Constructs three variables:
         1. a continuous variable named 'Quality'
         2. a discrete variable named 'Year'
-        3. a categorical variable name 'Location'
+        3. a categorical variable named 'Location'
 
         Defines a partition of the range of each variable.
 
