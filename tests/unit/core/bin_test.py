@@ -353,6 +353,14 @@ class BinCollectionTest(unittest.TestCase):
         assert isinstance(bin, Bin)
         assert bin.dimensions() == target.dimensions
 
+        # Test select_bin with a weights argument having None entries.
+        weights = (None, year_weights, None)
+        npseed(seed)
+
+        bin = target.select_bin(weights)
+        assert isinstance(bin, Bin)
+        assert bin.dimensions() == target.dimensions
+
     def test_select_units(self):
 
         # Construct a populated BinCollection.
@@ -370,7 +378,7 @@ class BinCollectionTest(unittest.TestCase):
         for unit in result:
             assert isinstance(unit, str)
 
-        # Select units with prescribed bin weights.
+        # Test select_units with prescribed bin weights.
         quality_weights = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2]
         year_weights = [1, 1, 1, 1, 1, 1, 1, 4, 4, 4]
         location_weights = [2, 1, 2, 1, 0, 0, 0, 0]
@@ -395,6 +403,18 @@ class BinCollectionTest(unittest.TestCase):
         for unit in result:
             assert isinstance(unit, str)
 
+        # Test select_units with a weights argument having None entries.
+        weights = (None, year_weights, None)
+        npseed(seed)
+
+        result = target.select_units(k, weights=weights)
+
+        assert isinstance(result, set)
+        assert len(result) == k
+        for unit in result:
+            assert isinstance(unit, str)
+
+        print(result)
 
 if __name__ == '__main__':
     unittest.main()

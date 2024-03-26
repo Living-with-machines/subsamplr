@@ -136,12 +136,14 @@ class BinCollection:
             d = d[i]
 
     def select_units(self, k, weights=None):
-        """Select units at random, weighting by bin sizes or by the given weights.
+        """Select units at random, weighted by the unit counts of the bins or by the given weights.
 
         Args:
             k       (int): The number of items to select.
             weights      : Optional. A tuple of lists, one per dimension, 
-                           specifying the sampling weights.
+                           specifying the sampling weights. If a tuple entry is
+                           None, bins in that dimension will be weighted by their 
+                           unit counts.
 
         Return:
             A set of (str) names of subsample units.
@@ -164,16 +166,15 @@ class BinCollection:
         return selection
 
     def select_bin(self, weights=None):
-        """Select a bin at random, weighted by the size of the bin or by the given weights.
+        """Select a bin at random, weighted by the unit counts of the bins or by the given weights.
         
         Args:
-            weights      : Optional. A tuple of lists, one per dimension, 
-                           specifying the sampling weights.
+            weights   : Optional. A tuple of lists, one per dimension, 
+                        specifying the sampling weights. If a tuple entry is
+                        None, bins in that dimension will be weighted by their 
+                        unit counts.
         """
         # TODO. Consider optimising by selecting many bins at once.
-
-        # TODO (ALSO IN select_units): allow None entries in the weights tuple 
-        # and use representative weights (weight_of_parts) on those dimensions.
 
         d = self.bins
         for dim in self.dimensions:
@@ -236,7 +237,8 @@ class BinCollection:
             d          (dict): A dictionary within the nested bins attribute.
             dim    (Variable): The dimension of interest. 
             weights          : A list specifying the sampling weights
-                               along this dimension.
+                               along this dimension. If None, representative
+                               weights (i.e. unit counts) are returned.
             normalised (bool): If True, the weights are normalised as a
                                probability distribution.
 
@@ -250,6 +252,10 @@ class BinCollection:
             ValueError: If a non-zero weight is prescribed for a bin 
                         containing zero units.
         """
+
+        # If weights is None, return representative weights based on unit counts.
+        if not weights:
+            return self.weight_of_parts(d=d, normalised=normalised)
 
         # Validate the weights argument.
         total_weight = sum(weights)
