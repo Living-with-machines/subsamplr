@@ -74,6 +74,10 @@ class BinCollection:
         if track_exclusions:
             self.exclusions = dict()  # type: dict
 
+    def dimension_index(self, dim):
+        """Get the index of the given dimension."""
+        return self.dimensions.index(dim)
+
     def assign_to_bin(self, unit, values):
         """Assign a unit to a bin and create the bin if it doesn't already exist.
 
@@ -131,31 +135,13 @@ class BinCollection:
             # Otherwise, descend down one level into the nested dictionary.
             d = d[i]
 
-    def select_bin(self):
-        """Select a bin at random, weighted by the size of the bin."""
-        # TODO. Consider optimising by selecting many bins at once.
-
-        d = self.bins
-        for _ in self.dimensions:
-            # Get the weights for the parts in this dimension.
-            weights = self.weight_of_parts(d, normalised=True)
-
-            # Pick one part at random, according to the weights.
-            i = choice(list(weights.keys()), p=list(weights.values()))
-
-            # If the value of the selected part is a Bin, return it.
-            if isinstance(d[i], Bin):
-                return d[i]
-
-            # Otherwise descend to the next level in the nested dictionary.
-            d = d[i]
-        raise RuntimeError("Bin selection failed.")
-
-    def select_units(self, k):
-        """Select units at random, weighting by bin sizes.
+    def select_units(self, k, weights=None):
+        """Select units at random, weighting by bin sizes or by the given weights.
 
         Args:
             k       (int): The number of items to select.
+            weights      : Optional. A tuple of lists, one per dimension, 
+                           specifying the sampling weights.
 
         Return:
             A set of (str) names of subsample units.
@@ -165,7 +151,7 @@ class BinCollection:
             out to be greater than the bin size.
         """
         selection = set()
-        bins = [self.select_bin() for _ in range(k)]
+        bins = [self.select_bin(weights) for _ in range(k)]
         while len(bins) != 0:
             # Consider the first bin selected.
             bin = bins[0]
@@ -177,6 +163,42 @@ class BinCollection:
             bins = [b for b in bins if b != bin]
         return selection
 
+    def select_bin(self, weights=None):
+        """Select a bin at random, weighted by the size of the bin or by the given weights.
+        
+        Args:
+            weights      : Optional. A tuple of lists, one per dimension, 
+                           specifying the sampling weights.
+        """
+        # TODO. Consider optimising by selecting many bins at once.
+
+        # TODO (ALSO IN select_units): allow None entries in the weights tuple 
+        # and use representative weights (weight_of_parts) on those dimensions.
+
+        d = self.bins
+        for dim in self.dimensions:
+            # Get the weights for the parts in this dimension.
+            if weights:
+                dim_weights = weights[self.dimension_index(dim)]
+                wp = self.prescribed_weights(d, dim=dim, weights=dim_weights, normalised=True)
+            else: 
+                wp = self.weight_of_parts(d, normalised=True)
+
+            # Pick one part at random, according to the weights.
+            i = choice(list(wp.keys()), p=list(wp.values()))
+
+            # If the value of the selected part is a Bin, return it.
+            if isinstance(d[i], Bin):
+                return d[i]
+
+            # Otherwise descend to the next level in the nested dictionary.
+            d = d[i]
+
+        raise RuntimeError("Bin selection failed.")
+
+    # Note: there is no weights argument here, because the dictionary d only
+    # contains the populated parts in the BinCollection, so there is no way
+    # to validate that the list of weights is valid for the particular partition.
     def weight_of_parts(self, d, normalised):
         """Find the weights of partition parts in a particular dimension.
 
@@ -205,6 +227,55 @@ class BinCollection:
         total_weight = sum(ret.values())
         for key in ret.keys():
             ret[key] = ret[key]/total_weight
+        return ret
+    
+    def prescribed_weights(self, d, dim, weights, normalised):
+        """Compute a list of prescribed weights.
+        
+        Args:
+            d          (dict): A dictionary within the nested bins attribute.
+            dim    (Variable): The dimension of interest. 
+            weights          : A list specifying the sampling weights
+                               along this dimension.
+            normalised (bool): If True, the weights are normalised as a
+                               probability distribution.
+
+        Returns:
+            A dictionary keyed by the populated partition indices for the given
+            dimension, with prescribed weights as the corresponding values.
+
+        Raises:
+            ValueError: Unless the list of weights has the same length as 
+                        the partition of the given dimension.
+            ValueError: If a non-zero weight is prescribed for a bin 
+                        containing zero units.
+        """
+
+        # Validate the weights argument.
+        total_weight = sum(weights)
+        if total_weight == 0:
+            msg = f"Prescribed weights for '{dim.name}' dimension are all zero."
+            raise ValueError(msg)
+
+        if len(weights) != len(dim.partition):
+            msg = f"Invalid weights for '{dim.name}' dimension. Expected length: {len(dim.partition)}. Actual length: {len(weights)}."
+            raise ValueError(msg)
+
+        # If a weight is non-zero but the corresponding bin (or bin slice) is empty, raise an error.
+        for k, weight in enumerate(weights):
+            if weight != 0 and not k in d.keys():
+                msg = f"Bin {k} in the '{dim.name}' dimension is empty. Cannot prescribe non-zero weight."
+                raise ValueError(msg)
+
+        # Line up the weights with the populated partition indices.
+        ret = dict()
+        for k in d.keys():
+            ret[k] = weights[k]
+
+        if normalised:
+            for k in ret.keys():
+                ret[k] = ret[k]/total_weight
+
         return ret
 
     def iter(self, d=None):

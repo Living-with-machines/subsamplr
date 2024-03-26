@@ -5,6 +5,7 @@ from subsamplr.core.bin import Bin, BinCollection
 from fractions import Fraction
 import random
 from numpy.random import seed as npseed  # type: ignore
+import pytest  # type: ignore
 import unittest
 
 
@@ -81,7 +82,7 @@ class BinCollectionTest(unittest.TestCase):
 
         # Construct a categorical Location dimension.
         dim3 = CatVar("Location")
-        dim3.partition = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW']
+        dim3.partition = ['N', 'E', 'S', 'W', 'NE', 'SE', 'SW', 'NW']
 
         dimensions = [dim1, dim2, dim3]
         target = BinCollection(dimensions)
@@ -101,6 +102,19 @@ class BinCollectionTest(unittest.TestCase):
         for unit, values in zip(units, all_values):
             target.assign_to_bin(unit, values)
         return target
+
+    def test_dimesion_index(self):
+
+        # Construct an empty BinCollection.
+        seed = 147
+        target = self.construct_target(assign=False, seed=seed)
+
+        assert target.dimension_index(target.dimensions[0]) == 0
+        assert target.dimension_index(target.dimensions[1]) == 1
+        assert target.dimension_index(target.dimensions[2]) == 2
+
+        with pytest.raises(IndexError):
+            target.dimension_index(target.dimensions[3])
 
     def test_assign_to_bin(self):
 
@@ -199,6 +213,101 @@ class BinCollectionTest(unittest.TestCase):
         assert target.weight_of_parts(target.bins[0], False)[7] == 1
         assert target.weight_of_parts(target.bins[0], False)[9] == 3
 
+    def test_prescribed_weights(self):
+
+        # Construct a populated BinCollection.
+        seed = 147
+        size = 100
+        target = self.construct_target(assign=True, size=size, seed=seed)
+
+        # Test the Quality dimension.
+        dim = target.dimensions[0]
+        d = target.bins
+
+        # Test with an invalid list of weights.
+        quality_weights = [1, 1, 1, 1, 1, 2, 2, 2, 2]
+        with pytest.raises(ValueError):
+            target.prescribed_weights(d, dim, quality_weights, False)
+
+        # Now test with valid weights.
+        quality_weights = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2]
+        # Weights do not depend on the unit counts. They are prescribed.
+        for i in range(5):
+            assert target.prescribed_weights(d, dim, quality_weights, False)[i] == 1
+        for i in range(5, 10):
+            assert target.prescribed_weights(d, dim, quality_weights, False)[i] == 2
+
+        for i in range(5):
+            assert target.prescribed_weights(d, dim, quality_weights, True)[i] == 1/15
+        for i in range(5, 10):
+            assert target.prescribed_weights(d, dim, quality_weights, True)[i] == 2/15
+
+        # Test the Year dimension.
+        dim = target.dimensions[1]
+        d = target.bins[0] # Descend into the first part of the Quality partition.
+
+        # Test with an invalid list of weights (wrong length).
+        year_weights = [1, 1, 1, 1, 1, 1, 1, 4, 4]
+        with pytest.raises(ValueError):
+            target.prescribed_weights(d, dim, year_weights, False)
+
+        # Test with an invalid list of weights (wrong nonzero when bins are empty).
+        year_weights = [1, 1, 1, 1, 1, 1, 1, 4, 4, 4]
+        with pytest.raises(ValueError):
+            assert target.prescribed_weights(d, dim, year_weights, False)
+
+        # With seed = 147, only bins with indices 2, 3, 7 & 9 are populated in this dimension slice.
+        year_weights = [0, 0, 1, 1, 0, 0, 0, 4, 0, 4]
+        for i in range(10):
+            if i not in [2, 3, 7, 9]:
+                with pytest.raises(KeyError):
+                    target.prescribed_weights(d, dim, year_weights, False)[i]
+
+        # Weights do not depend on the unit counts. They are prescribed.
+        assert target.prescribed_weights(d, dim, year_weights, False)[2] == 1
+        assert target.prescribed_weights(d, dim, year_weights, False)[3] == 1
+        assert target.prescribed_weights(d, dim, year_weights, False)[7] == 4
+        assert target.prescribed_weights(d, dim, year_weights, False)[9] == 4
+
+        assert target.prescribed_weights(d, dim, year_weights, True)[2] == 1/10
+        assert target.prescribed_weights(d, dim, year_weights, True)[3] == 1/10
+        assert target.prescribed_weights(d, dim, year_weights, True)[7] == 4/10
+        assert target.prescribed_weights(d, dim, year_weights, True)[9] == 4/10
+
+        # Test the Location dimension.
+        dim = target.dimensions[2]
+
+        # Descend into the first part of the Quality partition and the last part of the Year partition.
+        d = target.bins[0][9]
+
+        # Test with an invalid list of weights (wrong length).
+        location_weights = [2, 1, 2, 1, 0, 0]
+        with pytest.raises(ValueError):
+            target.prescribed_weights(d, dim, location_weights, False)
+
+        # Test with an invalid list of weights (wrong nonzero when bins are empty).
+        location_weights = [2, 1, 2, 1, 0, 0, 0, 0]
+        with pytest.raises(ValueError):
+            assert target.prescribed_weights(d, dim, location_weights, False)
+
+        location_weights = [0, 0, 2, 1, 0, 0, 0, 0]
+
+        # With seed = 147, only bins with indices 2, 3 & 5 are populated in this dimension slice.
+        for i in range(8):
+            if i not in [2, 3, 5]:
+                with pytest.raises(KeyError):
+                    target.prescribed_weights(d, dim, location_weights, False)[i]
+
+        # Weights do not depend on the unit counts. They are prescribed.
+        assert target.prescribed_weights(d, dim, location_weights, False)[2] == 2
+        assert target.prescribed_weights(d, dim, location_weights, False)[3] == 1
+        assert target.prescribed_weights(d, dim, location_weights, False)[5] == 0
+       
+        assert target.prescribed_weights(d, dim, location_weights, True)[2] == 2/3
+        assert target.prescribed_weights(d, dim, location_weights, True)[3] == 1/3
+        assert target.prescribed_weights(d, dim, location_weights, True)[5] == 0
+
+
     def test_select_bin(self):
 
         # Construct a populated BinCollection.
@@ -217,21 +326,69 @@ class BinCollectionTest(unittest.TestCase):
         assert isinstance(bin, Bin)
         assert bin.dimensions() == target.dimensions
 
+        # Test select_bin with a weights argument.
+        quality_weights = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2]
+        year_weights = [1, 1, 1, 1, 1, 1, 1, 4, 4, 4]
+        location_weights = [2, 1, 2, 1, 0, 0, 0, 0]
+        weights = (quality_weights, year_weights, location_weights)
+
+        npseed(seed)
+        # With only 100 units in the population, these weights cannot be prescribed
+        # because some bins (or bin slices) having non-zero weights are empty.
+        with pytest.raises(ValueError):
+            bin = target.select_bin(weights)
+
+        # Try again with a bigger population.
+        size = 5000
+        target = self.construct_target(assign=True, size=size, seed=seed)
+        assert len(target.units()) == size
+        assert target.count_units() == size
+
+        # With seed = 147 and size = 5000, 798 bins are created.
+        assert target.count_bins() == 798
+
+        npseed(seed)
+        # With 5000 units in the population, the above weights can be prescribed.
+        bin = target.select_bin(weights)
+        assert isinstance(bin, Bin)
+        assert bin.dimensions() == target.dimensions
+
     def test_select_units(self):
 
         # Construct a populated BinCollection.
         seed = 147
-        size = 10000
+        size = 6000
         target = self.construct_target(assign=True, size=size, seed=seed)
         assert target.count_units() == size
-
-        # for bin in target.iter():
-        #     print(bin)
-        #     print(bin.count())
 
         k = 100
         npseed(seed)
         result = target.select_units(k)
+
+        assert isinstance(result, set)
+        assert len(result) == k
+        for unit in result:
+            assert isinstance(unit, str)
+
+        # Select units with prescribed bin weights.
+        quality_weights = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2]
+        year_weights = [1, 1, 1, 1, 1, 1, 1, 4, 4, 4]
+        location_weights = [2, 1, 2, 1, 0, 0, 0, 0]
+        weights = (quality_weights, year_weights, location_weights)
+        
+        # With seed = 147 and size = 6000, unit selection fails because at least
+        # one of the selected bins has too few units for selection without replacement.
+        npseed(seed)
+        with pytest.raises(ValueError):
+            target.select_units(k, weights=weights)
+
+        # With seed = 147 and size = 12000, unit selection succeeds.
+        size = 12000
+        npseed(seed)
+        target = self.construct_target(assign=True, size=size, seed=seed)
+        assert target.count_units() == size
+
+        result = target.select_units(k, weights=weights)
 
         assert isinstance(result, set)
         assert len(result) == k

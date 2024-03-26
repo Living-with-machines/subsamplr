@@ -81,7 +81,7 @@ class VariableTestCase(unittest.TestCase):
                           continuous_variable, (1855, 1856, 1857, 1858, 1859))
 
 
-    def test_cateogry(self):
+    def test_category(self):
 
         variable = CatVar("Year")
         target = CatVar.Category(variable, "NE")
