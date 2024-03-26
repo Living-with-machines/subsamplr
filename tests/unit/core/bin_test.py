@@ -383,7 +383,11 @@ class BinCollectionTest(unittest.TestCase):
         year_weights = [1, 1, 1, 1, 1, 1, 1, 4, 4, 4]
         location_weights = [2, 1, 2, 1, 0, 0, 0, 0]
         weights = (quality_weights, year_weights, location_weights)
-        
+
+        # Check for an error if the weights are not a valid collection.
+        with pytest.raises(ValueError):
+            target.select_units(k, weights=year_weights)
+
         # With seed = 147 and size = 6000, unit selection fails because at least
         # one of the selected bins has too few units for selection without replacement.
         npseed(seed)
@@ -413,8 +417,6 @@ class BinCollectionTest(unittest.TestCase):
         assert len(result) == k
         for unit in result:
             assert isinstance(unit, str)
-
-        print(result)
 
 if __name__ == '__main__':
     unittest.main()

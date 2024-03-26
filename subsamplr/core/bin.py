@@ -176,6 +176,12 @@ class BinCollection:
         """
         # TODO. Consider optimising by selecting many bins at once.
 
+        # Validate the weights argument.
+        if weights:
+            if len(weights) != len(self.dimensions):
+                msg = f"Invalid weights. Expected length: {len(self.dimensions)}. Actual length: {len(weights)}"
+                raise ValueError(msg)
+
         d = self.bins
         for dim in self.dimensions:
             # Get the weights for the parts in this dimension.

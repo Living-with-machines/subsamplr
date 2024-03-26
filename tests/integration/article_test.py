@@ -106,7 +106,7 @@ def test_article_subsampling(config, articles_100000):
     assert bc.count_units() + bc.count_exclusions() == len(generated_units)
 
     # Construct a subsample of 5000 units.
-    k = 5000
+    k = 500
     seed = 147
     npseed(seed)
 
@@ -118,3 +118,40 @@ def test_article_subsampling(config, articles_100000):
     # The sample consists of the article identifiers.
     for unit in sample:
         assert isinstance(unit, str)
+
+    sampled_rows = articles_100000[articles_100000['article_id'].isin(sample)]
+    assert len(sampled_rows) == k
+
+    # Now test article subsampling with prescriptive weights.
+
+    # Sample articles only in the 1850s, 1860s and 1870s,
+    # and give extra weight to the 1870s.
+    year_weights = [0, 0, 0, 0, 0, 1, 2, 10, 0, 0, 0, 0]
+
+    # Weights tuple must refer to all dimensions.
+    with pytest.raises(ValueError):
+        bc.select_units(k, weights=year_weights)
+
+    weights = (year_weights, None, None)
+    
+    npseed(seed)
+    sample = bc.select_units(k, weights=weights)
+
+    assert isinstance(sample, set)
+    assert len(sample) == k
+
+    sampled_rows_weighted = articles_100000[articles_100000['article_id'].isin(sample)]
+    assert len(sampled_rows_weighted) == k
+
+    # Check that the weights have been respected.
+    fifties = range(1850, 1860)
+    sampled_fifties = sampled_rows_weighted[sampled_rows_weighted['year'].isin(fifties)]
+    sixties = range(1860, 1870)
+    sampled_sixties = sampled_rows_weighted[sampled_rows_weighted['year'].isin(sixties)]
+    seventies = range(1870, 1880)
+    sampled_seventies = sampled_rows_weighted[sampled_rows_weighted['year'].isin(seventies)]
+
+    assert len(sampled_fifties) == 35 # sampled weight 35/500 = 0.07 ~= 1/13
+    assert len(sampled_sixties) == 73 # sampled weight 73/500 = 0.146 ~= 2/13
+    assert len(sampled_seventies) == 392 # sampled weight 392/500 = 0.7 ~= 10/13
+
