@@ -74,6 +74,16 @@ class BinCollection:
         if track_exclusions:
             self.exclusions = dict()  # type: dict
 
+    def __str__(self):
+        ret = "BinCollection:\n"
+        ret += f"Dimensions: {'; '.join([dim.name for dim in self.dimensions])}\n"
+        ret += "Unit counts:\n"
+        for k, v in self.bins.items():
+            part = self.dimensions[0].partition[k]
+            ret += f"{': '.join([str(part), str(self.count_units(d=v))])}\n"
+        return ret
+
+
     def dimension_index(self, dim):
         """Get the index of the given dimension."""
         return self.dimensions.index(dim)
@@ -178,6 +188,9 @@ class BinCollection:
 
         # Validate the weights argument.
         if weights:
+            if not isinstance(weights, tuple):
+                msg = f"Invalid weights. Must be a tuple."
+                raise ValueError(msg)
             if len(weights) != len(self.dimensions):
                 msg = f"Invalid weights. Expected length: {len(self.dimensions)}. Actual length: {len(weights)}"
                 raise ValueError(msg)
@@ -187,6 +200,9 @@ class BinCollection:
             # Get the weights for the parts in this dimension.
             if weights:
                 dim_weights = weights[self.dimension_index(dim)]
+                if not isinstance(dim_weights, list):
+                    msg = f"Invalid weights. Must be a tuple of lists (one for each dimension)."
+                    raise ValueError(msg)
                 wp = self.prescribed_weights(d, dim=dim, weights=dim_weights, normalised=True)
             else: 
                 wp = self.weight_of_parts(d, normalised=True)
