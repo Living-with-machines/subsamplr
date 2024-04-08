@@ -77,10 +77,13 @@ class BinCollection:
     def __str__(self):
         ret = "BinCollection:\n"
         ret += f"Dimensions: {'; '.join([dim.name for dim in self.dimensions])}\n"
+        if self.count_units == 0:
+            return ret
         ret += "Unit counts:\n"
         for k, v in self.bins.items():
             part = self.dimensions[0].partition[k]
-            ret += f"{': '.join([str(part), str(self.count_units(d=v))])}\n"
+            d = v if not isinstance(v, Bin) else None
+            ret += f"{': '.join([str(part), str(self.count_units(d=d))])}\n"
         return ret
 
 

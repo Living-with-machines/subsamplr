@@ -22,6 +22,17 @@ def config():
                 min: 0.6, max: 1, bin_size: 0.1}
         """
 
+# Sample configuration for testing:
+@pytest.fixture
+def config_year():
+    return \
+        """
+        # Subsampling dimensions
+        variables:
+            - {name: 'year', class: 'discrete', type: 'int', min: 1800,
+                max: 1919, discretisation: 1, bin_size: 10}
+        """
+
 
 @pytest.fixture
 def articles_100():
@@ -33,7 +44,7 @@ def articles_100000():
     return read_csv('tests/fixtures/articles_query_result_100000.csv', sep=",")
 
 
-def test_article_binning(config, articles_100):
+def test_article_binning(config, config_year, articles_100):
 
     # Use the BinCollection static factory method to construct an
     # instance from the configuration parameters.
@@ -58,6 +69,8 @@ def test_article_binning(config, articles_100):
     for unit, values in units:
         bc.assign_to_bin(unit, values)
 
+    assert isinstance(bc.__str__(), str)
+
     # Of the 100 units in the table, 68 fall within the configured bin collection range.
     assert bc.count_units() == 68
 
@@ -70,6 +83,44 @@ def test_article_binning(config, articles_100):
 
     # To hold the 68 units, 18 bins were constructed.
     assert bc.count_bins() == 18
+
+    #### Now test with a single variable configured.
+
+    # Use the BinCollection static factory method to construct an
+    # instance from the configuration parameters.
+    config = yaml.safe_load(StringIO(config_year))
+    bc = BinCollection.construct(config, track_exclusions=True)
+
+    assert isinstance(bc, BinCollection)
+
+    # One dimension per configured variable.
+    assert len(bc.dimensions) == len(config['variables'])
+    for i in range(0, len(bc.dimensions)):
+        assert bc.dimensions[i].name == config['variables'][i]['name']
+
+    assert bc.count_bins() == 0
+    assert bc.count_units() == 0
+    assert bc.count_exclusions() == 0
+
+    # Generate article units from the test fixture (data frame)
+    # and assign to the BinCollection.
+    units = UnitGenerator.generate_units(
+        articles_100, unit_id="article_id", variables=bc.dimensions)
+    for unit, values in units:
+        bc.assign_to_bin(unit, values)
+
+    assert isinstance(bc.__str__(), str)
+
+    # All of the 100 units in the table fall within the configured bin collection range.
+    assert bc.count_units() == 100
+    assert bc.count_exclusions() == 0
+
+    # Each of the 100 rows is either added to the bin collection as a unit
+    # or recorded as an exclusion.
+    assert bc.count_units() + bc.count_exclusions() == len(articles_100.index)
+
+    # To hold the 100 units a single bin was constructed.
+    assert bc.count_bins() == 1
 
 
 def test_article_subsampling(config, articles_100000):

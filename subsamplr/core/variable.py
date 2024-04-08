@@ -200,7 +200,7 @@ class DiscreteVariable(Variable):
             self.contents = contents
 
         def __str__(self):
-            return f"{self.variable.name}: {self.contents[0]}, ..., {self.contents[-1]}"
+            return f"{self.variable.name}: {self.contents[0]}-{self.contents[-1]}"
 
         def contains(self, value):
             return value in self.contents
