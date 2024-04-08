@@ -200,7 +200,7 @@ class BinCollection:
             # Get the weights for the parts in this dimension.
             if weights:
                 dim_weights = weights[self.dimension_index(dim)]
-                if not isinstance(dim_weights, list):
+                if dim_weights and not isinstance(dim_weights, list):
                     msg = f"Invalid weights. Must be a tuple of lists (one for each dimension)."
                     raise ValueError(msg)
                 wp = self.prescribed_weights(d, dim=dim, weights=dim_weights, normalised=True)

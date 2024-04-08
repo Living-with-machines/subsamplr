@@ -154,4 +154,3 @@ def test_article_subsampling(config, articles_100000):
     assert len(sampled_fifties) == 35 # sampled weight 35/500 = 0.07 ~= 1/13
     assert len(sampled_sixties) == 73 # sampled weight 73/500 = 0.146 ~= 2/13
     assert len(sampled_seventies) == 392 # sampled weight 392/500 = 0.7 ~= 10/13
-
