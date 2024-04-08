@@ -82,8 +82,8 @@ class BinCollection:
         ret += "Unit counts:\n"
         for k, v in self.bins.items():
             part = self.dimensions[0].partition[k]
-            d = v if not isinstance(v, Bin) else None
-            ret += f"{': '.join([str(part), str(self.count_units(d=d))])}\n"
+            count = v.count() if isinstance(v, Bin) else self.count_units(d=v)
+            ret += f"{': '.join([str(part), str(count)])}\n"
         return ret
 
 

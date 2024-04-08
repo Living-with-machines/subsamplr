@@ -30,7 +30,7 @@ def config_year():
         # Subsampling dimensions
         variables:
             - {name: 'year', class: 'discrete', type: 'int', min: 1800,
-                max: 1919, discretisation: 1, bin_size: 10}
+                max: 1899, discretisation: 1, bin_size: 10}
         """
 
 
@@ -44,7 +44,7 @@ def articles_100000():
     return read_csv('tests/fixtures/articles_query_result_100000.csv', sep=",")
 
 
-def test_article_binning(config, config_year, articles_100):
+def test_article_binning(config, articles_100):
 
     # Use the BinCollection static factory method to construct an
     # instance from the configuration parameters.
@@ -84,7 +84,7 @@ def test_article_binning(config, config_year, articles_100):
     # To hold the 68 units, 18 bins were constructed.
     assert bc.count_bins() == 18
 
-    #### Now test with a single variable configured.
+def test_article_binning_by_year(config_year, articles_100000):
 
     # Use the BinCollection static factory method to construct an
     # instance from the configuration parameters.
@@ -105,22 +105,23 @@ def test_article_binning(config, config_year, articles_100):
     # Generate article units from the test fixture (data frame)
     # and assign to the BinCollection.
     units = UnitGenerator.generate_units(
-        articles_100, unit_id="article_id", variables=bc.dimensions)
+        articles_100000, unit_id="article_id", variables=bc.dimensions)
     for unit, values in units:
         bc.assign_to_bin(unit, values)
 
     assert isinstance(bc.__str__(), str)
+    print(bc)
 
-    # All of the 100 units in the table fall within the configured bin collection range.
-    assert bc.count_units() == 100
-    assert bc.count_exclusions() == 0
+    # Of the 100000 units in the table, 65354 fall within the configured bin collection range.
+    assert bc.count_units() == 65354
+    assert bc.count_exclusions() == 34646
 
     # Each of the 100 rows is either added to the bin collection as a unit
     # or recorded as an exclusion.
-    assert bc.count_units() + bc.count_exclusions() == len(articles_100.index)
+    assert bc.count_units() + bc.count_exclusions() == len(articles_100000.index)
 
-    # To hold the 100 units a single bin was constructed.
-    assert bc.count_bins() == 1
+    # To hold the 65354 units, 3 bins were constructed.
+    assert bc.count_bins() == 3
 
 
 def test_article_subsampling(config, articles_100000):
